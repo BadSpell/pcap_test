@@ -86,23 +86,27 @@ int main()
 	{
 		LPPACKET_INFO packetInfo = (LPPACKET_INFO)packet;
 
-		printf("Source MAC: %s / IP: %s:%d\n", getMac(packetInfo->sourcemac), getIP(packetInfo->sourceip), ntohs(packetInfo->sourceport));
-		printf("Destin MAC: %s / IP: %s:%d\n", getMac(packetInfo->destmac), getIP(packetInfo->destip), ntohs(packetInfo->destport));
-		printf("--------------------------- DATA START ---------------------------\n");
-		for (int j = 0; j < 3; j++)
+		// Check if header contains IPv4 and TCP
+		if (ntohs(packetInfo->iptype) == 0x0800 && packetInfo->protocol == 6)
 		{
-			printf("%04X  ", j * 0x10);
-			for (int i = 0; i < 0x10; i++)
-				printf("%02X ", packetInfo->data[i + j * 0x10]);
-			printf(" ");
-			for (int i = 0; i < 0x10; i++)
+			printf("Source MAC: %s / IP: %s:%d\n", getMac(packetInfo->sourcemac), getIP(packetInfo->sourceip), ntohs(packetInfo->sourceport));
+			printf("Destin MAC: %s / IP: %s:%d\n", getMac(packetInfo->destmac), getIP(packetInfo->destip), ntohs(packetInfo->destport));
+			printf("--------------------------- DATA START ---------------------------\n");
+			for (int j = 0; j < 5; j++)
 			{
-				char c = packetInfo->data[i + j * 0x10];
-				printf("%c", isprint(c) ? c : '.');
+				printf("%04X  ", j * 0x10);
+				for (int i = 0; i < 0x10; i++)
+					printf("%02X ", packetInfo->destmac[i + j * 0x10]);
+				printf(" ");
+				for (int i = 0; i < 0x10; i++)
+				{
+					char c = packetInfo->destmac[i + j * 0x10];
+					printf("%c", isprint(c) ? c : '.');
+				}
+				printf("\n");
 			}
-			printf("\n");
+			printf("---------------------------- DATA END ----------------------------\n\n\n");
 		}
-		printf("---------------------------- DATA END ----------------------------\n\n\n");
 	}
 	pcap_close(handle);
 	return 0;
