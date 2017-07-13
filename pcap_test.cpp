@@ -1,3 +1,4 @@
+//BoB 6th BadSpell(KJS)
 #include <stdio.h>
 #include <pcap.h>
 #include <netinet/in.h>
@@ -96,10 +97,8 @@ int main()
 			printf(" ");
 			for (int i = 0; i < 0x10; i++)
 			{
-				if (isprint(packetInfo->data[i + j * 0x10]))
-					printf("%c", packetInfo->data[i + j * 0x10]);
-				else
-					printf(".");
+				char c = packetInfo->data[i + j * 0x10];
+				printf("%c", isprint(c) ? c : '.');
 			}
 			printf("\n");
 		}
