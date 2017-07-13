@@ -87,7 +87,7 @@ int main()
 		LPPACKET_INFO packetInfo = (LPPACKET_INFO)packet;
 
 		// Check if header contains IPv4 and TCP
-		if (ntohs(packetInfo->iptype) == 0x0800 && packetInfo->protocol == 6)
+		if (ntohs(packetInfo->iptype) == ETHER_TYPE_IPv4 && packetInfo->protocol == IPPROTO_TCP)
 		{
 			printf("Source MAC: %s / IP: %s:%d\n", getMac(packetInfo->sourcemac), getIP(packetInfo->sourceip), ntohs(packetInfo->sourceport));
 			printf("Destin MAC: %s / IP: %s:%d\n", getMac(packetInfo->destmac), getIP(packetInfo->destip), ntohs(packetInfo->destport));
