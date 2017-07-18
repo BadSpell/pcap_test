@@ -4,26 +4,39 @@
 #include <netinet/in.h>
 #include <ctype.h>
 
-typedef struct _PACKET_INFO
+typedef struct _ETHER_INFO
 {
 	unsigned char destmac[6]; //0x00
 	unsigned char sourcemac[6]; //0x06
-	short iptype; //0x0C
+	unsigned short iptype; //0x0C
+} __attribute__((packed)) ETHER_INFO, *LPETHER_INFO;
+
+typedef struct _IP_INFO
+{
 	char version; //0x0E
 	char dscp; //0x0F
-	short totalLength; //0x10
-	short id; //0x12
-	short flag; //0x14
+	unsigned short totalLength; //0x10
+	unsigned short id; //0x12
+	unsigned short flag; //0x14
 	char ttl; //0x16
 	char protocol; //0x17
-	short headerchecksum; //0x18
+	unsigned short headerchecksum; //0x18
 	int sourceip; //0x1A
 	int destip; //0x1E
-	short sourceport; //0x22
-	short destport; //0x24
-	char unknown[0x10]; //0x34
-	unsigned char data[65536]; //0x36
-} __attribute__((packed)) PACKET_INFO, *LPPACKET_INFO;
+}  __attribute__((packed)) IP_INFO, *LPIP_INFO;
+
+typedef struct _TCP_HEADER
+{
+	unsigned short sourceport; //0x22
+	unsigned short destport; //0x24
+	unsigned int seqnum;
+	unsigned int acknum;
+	unsigned char headerlen;
+	unsigned char flag;
+	unsigned short wnd;
+	unsigned short checksum;
+	unsigned short urgptr;
+} __attribute__((packed)) TCP_HEADER, *LPTCP_HEADER;
 
 char macAddress[32];
 char *getMac(unsigned char *mac)
@@ -84,29 +97,45 @@ int main()
 	}
 	while((res = pcap_next_ex(handle, &header, &packet)) >= 0)
 	{
-		LPPACKET_INFO packetInfo = (LPPACKET_INFO)packet;
+		if (!packet)
+			continue;
 
-		// Check if header contains IPv4 and TCP
-		if (ntohs(packetInfo->iptype) == ETHER_TYPE_IPv4 && packetInfo->protocol == IPPROTO_TCP)
+		LPETHER_INFO etherInfo = (LPETHER_INFO)packet;
+
+		// Check if header contains IPv4
+		if (ntohs(etherInfo->iptype) != 0x0800)
+			continue;
+
+		LPIP_INFO ipInfo = (LPIP_INFO)(packet + sizeof(ETHER_INFO));
+
+		if (ipInfo->protocol != 6) // Check if TCP
+			continue;
+
+		LPTCP_HEADER tcpInfo = (LPTCP_HEADER)(packet + sizeof(ETHER_INFO) + sizeof(IP_INFO));
+		if (ntohs(tcpInfo->sourceport) != 80) //Only HTTP Port
+			continue;
+		
+		unsigned char *tcpdata = (unsigned char *)(packet + sizeof(ETHER_INFO) + sizeof(IP_INFO) + (tcpInfo->headerlen >> 4) * 4);
+		int szTcpdata = ntohs(ipInfo->totalLength) - sizeof(IP_INFO) - (tcpInfo->headerlen >> 4) * 4;
+
+		printf("Source MAC: %s / IP: %s:%d\n", getMac(etherInfo->sourcemac), getIP(ipInfo->sourceip), ntohs(tcpInfo->sourceport));
+		printf("Destin MAC: %s / IP: %s:%d\n", getMac(etherInfo->destmac), getIP(ipInfo->destip), ntohs(tcpInfo->destport));
+		printf("DataSize: %d\n", szTcpdata);
+		printf("--------------------------- DATA START ---------------------------\n");
+		for (int j = 0; j < szTcpdata / 0x10 && j < 3; j++)
 		{
-			printf("Source MAC: %s / IP: %s:%d\n", getMac(packetInfo->sourcemac), getIP(packetInfo->sourceip), ntohs(packetInfo->sourceport));
-			printf("Destin MAC: %s / IP: %s:%d\n", getMac(packetInfo->destmac), getIP(packetInfo->destip), ntohs(packetInfo->destport));
-			printf("--------------------------- DATA START ---------------------------\n");
-			for (int j = 0; j < 5; j++)
+			printf("%04X  ", j * 0x10);
+			for (int i = 0; i < 0x10; i++)
+				printf("%02X ", tcpdata[i + j * 0x10]);
+			printf(" ");
+			for (int i = 0; i < 0x10; i++)
 			{
-				printf("%04X  ", j * 0x10);
-				for (int i = 0; i < 0x10; i++)
-					printf("%02X ", packetInfo->destmac[i + j * 0x10]);
-				printf(" ");
-				for (int i = 0; i < 0x10; i++)
-				{
-					char c = packetInfo->destmac[i + j * 0x10];
-					printf("%c", isprint(c) ? c : '.');
-				}
-				printf("\n");
+				char c = tcpdata[i + j * 0x10];
+				printf("%c", isprint(c) ? c : '.');
 			}
-			printf("---------------------------- DATA END ----------------------------\n\n\n");
+			printf("\n");
 		}
+		printf("---------------------------- DATA END ----------------------------\n\n\n");
 	}
 	pcap_close(handle);
 	return 0;
