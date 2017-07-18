@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <pcap.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <ctype.h>
 
 typedef struct _ETHER_INFO
@@ -49,8 +50,10 @@ char *getMac(unsigned char *mac)
 char ipAddress[32];
 char *getIP(int _ip)
 {
-	unsigned char *ip = (unsigned char *)&_ip;
-	sprintf(ipAddress, "%d.%d.%d.%d", ip[0], ip[1],  ip[2],  ip[3]);
+	inet_ntop(AF_INET, &_ip, ipAddress, sizeof(ipAddress));
+
+	//unsigned char *ip = (unsigned char *)&_ip;
+	//sprintf(ipAddress, "%d.%d.%d.%d", ip[0], ip[1],  ip[2],  ip[3]);
 	return ipAddress;
 }
 
