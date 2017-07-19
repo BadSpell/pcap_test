@@ -7,14 +7,14 @@
 #include <ctype.h>
 #include <stdint.h>
 
-typedef struct _ETHER_INFO
+typedef struct _ETHER_HEADER
 {
 	uint8_t destmac[6]; //0x00
 	uint8_t sourcemac[6]; //0x06
 	uint16_t iptype; //0x0C
 } __attribute__((packed)) ETHER_INFO, *LPETHER_INFO;
 
-typedef struct _IP_INFO
+typedef struct _IP_HEADER
 {
 	uint8_t version; //0x0E
 	uint8_t dscp; //0x0F
