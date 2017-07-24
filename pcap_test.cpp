@@ -12,7 +12,7 @@ typedef struct _ETHER_HEADER
 	uint8_t destmac[6]; //0x00
 	uint8_t sourcemac[6]; //0x06
 	uint16_t iptype; //0x0C
-} __attribute__((packed)) ETHER_INFO, *LPETHER_INFO;
+} __attribute__((packed)) ETHER_HEADER, *LPETHER_HEADER;
 
 typedef struct _IP_HEADER
 {
@@ -26,7 +26,7 @@ typedef struct _IP_HEADER
 	uint16_t headerchecksum; //0x18
 	uint32_t sourceip; //0x1A
 	uint32_t destip; //0x1E
-}  __attribute__((packed)) IP_INFO, *LPIP_INFO;
+}  __attribute__((packed)) IP_HEADER, *LPIP_HEADER;
 
 typedef struct _TCP_HEADER
 {
@@ -88,23 +88,23 @@ int main(int argc, char **argv)
 		if (!packet) // Null packet check
 			continue;
 
-		LPETHER_INFO etherInfo = (LPETHER_INFO)packet;
-		if (ntohs(etherInfo->iptype) != ETHERTYPE_IP) // Check if header contains IPv4
+		LPETHER_HEADER etherHEADER = (LPETHER_HEADER)packet;
+		if (ntohs(etherHEADER->iptype) != ETHERTYPE_IP) // Check if header contains IPv4
 			continue;
 
-		LPIP_INFO ipInfo = (LPIP_INFO)(packet + sizeof(ETHER_INFO));
-		if (ipInfo->protocol != IPPROTO_TCP) // Check if TCP
+		LPIP_HEADER ipHEADER = (LPIP_HEADER)(packet + sizeof(ETHER_HEADER));
+		if (ipHEADER->protocol != IPPROTO_TCP) // Check if TCP
 			continue;
 
-		LPTCP_HEADER tcpInfo = (LPTCP_HEADER)(packet + sizeof(ETHER_INFO) + sizeof(IP_INFO));
-		if (ntohs(tcpInfo->sourceport) != 80 && ntohs(tcpInfo->destport) != 80) // Only HTTP port
+		LPTCP_HEADER tcpHEADER = (LPTCP_HEADER)(packet + sizeof(ETHER_HEADER) + sizeof(IP_HEADER));
+		if (ntohs(tcpHEADER->sourceport) != 80 && ntohs(tcpHEADER->destport) != 80) // Only HTTP port
 			continue;
 		
-		uint8_t *tcpdata = (uint8_t *)(packet + sizeof(ETHER_INFO) + sizeof(IP_INFO) + (tcpInfo->headerlen >> 4) * 4);
-		int szTcpdata = ntohs(ipInfo->totalLength) - sizeof(IP_INFO) - (tcpInfo->headerlen >> 4) * 4;
+		uint8_t *tcpdata = (uint8_t *)(packet + sizeof(ETHER_HEADER) + sizeof(IP_HEADER) + (tcpHEADER->headerlen >> 4) * 4);
+		int szTcpdata = ntohs(ipHEADER->totalLength) - sizeof(IP_HEADER) - (tcpHEADER->headerlen >> 4) * 4;
 
-		printf("Source MAC: %s / IP: %s:%d\n", getMac(etherInfo->sourcemac), getIP(ipInfo->sourceip), ntohs(tcpInfo->sourceport));
-		printf("Destin MAC: %s / IP: %s:%d\n", getMac(etherInfo->destmac), getIP(ipInfo->destip), ntohs(tcpInfo->destport));
+		printf("Source MAC: %s / IP: %s:%d\n", getMac(etherHEADER->sourcemac), getIP(ipHEADER->sourceip), ntohs(tcpHEADER->sourceport));
+		printf("Destin MAC: %s / IP: %s:%d\n", getMac(etherHEADER->destmac), getIP(ipHEADER->destip), ntohs(tcpHEADER->destport));
 		printf("DataSize: %d\n", szTcpdata);
 		if (!szTcpdata) // Null Data
 		{
